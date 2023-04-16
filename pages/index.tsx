@@ -27,15 +27,14 @@ export default function Home() {
         <div className="py-8 w-full flex items-center justify-center space-x-6">
           <div className="opacity-75 transition hover:opacity-100 cursor-pointer">
             <Link href="https://supabase.com" className="flex items-center justify-center">
-              <p className="text-base mr-2">Built by Supabase</p>
-              <Image src={'/supabase.svg'} width="20" height="20" alt="Supabase logo" />
+              <p className="text-base mr-2">Built by David Yoon</p>
             </Link>
           </div>
           <div className="border-l border-gray-300 w-1 h-4" />
           <div className="flex items-center justify-center space-x-4">
             <div className="opacity-75 transition hover:opacity-100 cursor-pointer">
               <Link
-                href="https://github.com/supabase/supabase"
+                href="https://github.com/davidyoondrums"
                 className="flex items-center justify-center"
               >
                 <Image src={'/github.svg'} width="20" height="20" alt="Github logo" />
@@ -43,7 +42,7 @@ export default function Home() {
             </div>
             <div className="opacity-75 transition hover:opacity-100 cursor-pointer">
               <Link
-                href="https://twitter.com/supabase"
+                href="https://twitter.com/davidy00n"
                 className="flex items-center justify-center"
               >
                 <Image src={'/twitter.svg'} width="20" height="20" alt="Twitter logo" />

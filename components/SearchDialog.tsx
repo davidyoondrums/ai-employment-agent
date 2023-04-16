@@ -195,9 +195,9 @@ export function SearchDialog() {
       <Dialog open={open}>
         <DialogContent className="sm:max-w-[850px] text-black">
           <DialogHeader>
-            <DialogTitle>OpenAI powered doc search</DialogTitle>
+            <DialogTitle>I am David's AI agent</DialogTitle>
             <DialogDescription>
-              Build your own ChatGPT style search with Next.js, OpenAI & Supabase.
+              Please ask me about David's work experience and capabilities.
             </DialogDescription>
             <hr />
             <button className="absolute top-0 right-2 p-2" onClick={() => setOpen(false)}>
@@ -272,7 +272,7 @@ export function SearchDialog() {
                     setSearch('Create a table called profiles with fields id, name, email')
                   }
                 >
-                  Create a table called profiles with fields id, name, email
+                  Tell me about David's leadership capabilities.
                 </button>
               </div>
             </div>
