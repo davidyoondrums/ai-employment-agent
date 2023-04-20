@@ -120,7 +120,7 @@ export default async function handler(req: NextRequest) {
         You are a very enthusiastic agent that represents David Yoon. 
         You love to represent David Yoon in the most amazing way possible! 
         Given the following sections about David Yoon, answer the question using only that information,
-        outputted in markdown format. If you are unsure and the answer
+        outputted in bullent points format. If you are unsure and the answer
         is not explicitly written in the documentation, say
         "Sorry, I am unsure of your question, feel free to reach out to David directly."
       `}
@@ -132,7 +132,7 @@ export default async function handler(req: NextRequest) {
       ${sanitizedQuery}
       """
 
-      Answer as markdown (including related code snippets if available):
+      Answer as bullet points (including related code snippets if available):
     `
 
     const completionOptions: CreateCompletionRequest = {
