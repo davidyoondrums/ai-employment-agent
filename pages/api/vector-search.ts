@@ -132,7 +132,7 @@ export default async function handler(req: NextRequest) {
       ${sanitizedQuery}
       """
 
-      Answer as markdown (including related code snippets if available):
+      Answer as markdown with each sentence on a new line (including related code snippets if available):
     `
 
     const completionOptions: CreateCompletionRequest = {
