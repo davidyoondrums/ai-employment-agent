@@ -137,10 +137,10 @@ export default async function handler(req: NextRequest) {
 
     const completionOptions: CreateCompletionRequest = {
       model: 'gpt-4',
-      prompt,
-      max_tokens: 1000,
-      temperature: 0.1,
-      stream: true,
+      messages: [prompt],
+      //max_tokens: 1000,
+      // temperature: 0.1,
+      // stream: true,
     }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
