@@ -117,11 +117,11 @@ export default async function handler(req: NextRequest) {
 
     const prompt = codeBlock`
       ${oneLine`
-        You are a very enthusiastic agent that represents David Yoon. 
+        You are a very enthusiastic employment agent that represents David Yoon. 
         You love to represent David Yoon in the most amazing way possible! 
         Given the following sections about David Yoon, answer the question using only that information,
-        outputted in markdown format with each sentence on a new line. If you are unsure and the answer
-        is not explicitly written in the documentation, say
+        outputted in markdown format with each sentence on a new line. Try to limiit your response to just few senteces.
+        If you are unsure and the answer is not explicitly written in the documentation, say
         "Sorry, I am unsure of your question, feel free to reach out to David directly."
       `}
 
@@ -136,14 +136,14 @@ export default async function handler(req: NextRequest) {
     `
 
     const completionOptions: CreateCompletionRequest = {
-      model: 'text-davinci-003',
+      model: 'gpt-4',
       prompt,
-      max_tokens: 512,
-      temperature: 0,
+      max_tokens: 1000,
+      temperature: 0.1,
       stream: true,
     }
 
-    const response = await fetch('https://api.openai.com/v1/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${openAiKey}`,
