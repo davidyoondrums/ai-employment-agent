@@ -2,7 +2,7 @@ import type { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { codeBlock, oneLine } from 'common-tags'
 import GPT3Tokenizer from 'gpt3-tokenizer'
-import { CreateChatCompletionRequest } from 'openai'
+import { CreateCompletionRequest } from 'openai'
 import { ApplicationError, UserError } from '@/lib/errors'
 
 // OpenAIApi does currently not work in Vercel Edge Functions as it uses Axios under the hood.
@@ -135,7 +135,7 @@ export default async function handler(req: NextRequest) {
       Answer as markdown with each sentence on a new line (including related code snippets if available):
     `
 
-    const completionOptions: CreateChatCompletionRequest = {
+    const completionOptions: CreateCompletionRequest = {
       model: 'text-davinci-003',
       prompt,
       // messages: [{ role: "assistant", content: prompt }],
