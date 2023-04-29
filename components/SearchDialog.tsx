@@ -122,7 +122,7 @@ export function SearchDialog() {
       }
 
       eventSource.addEventListener('error', handleError)
-      eventSource.addEventListener('content', (e: any) => {
+      eventSource.addEventListener('message', (e: any) => {
         try {
           setIsLoading(false)
 
