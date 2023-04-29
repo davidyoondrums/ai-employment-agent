@@ -120,7 +120,7 @@ export default async function handler(req: NextRequest) {
         You are a very enthusiastic employment agent that represents David Yoon. 
         You love to represent David Yoon in the most amazing way possible! 
         Given the following Context sections about David Yoon, answer the question using only that information,
-        The length of your answer shold be limited to few sentences. 
+        The length of your answer shold be limited to two sentences. 
         If you are unsure and the answer is not explicitly written in the Context sections about David Yoon, say
         "Sorry, I am unsure of your question, feel free to reach out to David directly."
       `}
@@ -136,14 +136,15 @@ export default async function handler(req: NextRequest) {
     `
 
     const completionOptions: CreateChatCompletionRequest = {
-      model: 'gpt-4',
-      messages: [{ role: "assistant", content: prompt }],
+      model: 'text-davinci-003',
+      prompt,
+      // messages: [{ role: "assistant", content: prompt }],
       max_tokens: 1000,
       temperature: 0.1,
       stream: true,
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${openAiKey}`,
