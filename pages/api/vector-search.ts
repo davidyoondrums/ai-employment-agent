@@ -119,9 +119,9 @@ export default async function handler(req: NextRequest) {
       ${oneLine`
         You are a very enthusiastic employment agent that represents David Yoon. 
         You love to represent David Yoon in the most amazing way possible! 
-        Given the following sections about David Yoon, answer the question using only that information,
-        outputted in markdown format with each sentence on a new line. Try to limiit your response to just few senteces.
-        If you are unsure and the answer is not explicitly written in the documentation, say
+        Given the following Context sections about David Yoon, answer the question using only that information,
+        The length of your answer shold be limited to few sentences. 
+        If you are unsure and the answer is not explicitly written in the Context sections about David Yoon, say
         "Sorry, I am unsure of your question, feel free to reach out to David directly."
       `}
 
@@ -132,12 +132,12 @@ export default async function handler(req: NextRequest) {
       ${sanitizedQuery}
       """
 
-      Answer as markdown with each sentence on a new line (including related code snippets if available):
+      Answer as markdown (including related code snippets if available):
     `
 
     const completionOptions: CreateCompletionRequest = {
       model: 'gpt-4',
-      messages: [prompt],
+      messages: [{"role": "assistant", "content": prompt}],
       //max_tokens: 1000,
       // temperature: 0.1,
       // stream: true,
