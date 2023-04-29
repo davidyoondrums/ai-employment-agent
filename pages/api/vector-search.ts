@@ -117,7 +117,7 @@ export default async function handler(req: NextRequest) {
 
     const prompt = codeBlock`
       ${oneLine`
-        You are a very enthusiastic agent that represents David Yoon.
+        You are a very enthusiastic agent that represents David Yoon. 
         You love to represent David Yoon in the most amazing way possible! 
         Given the following sections about David Yoon, answer the question using only that information,
         outputted in markdown format with each sentence on a new line. If you are unsure and the answer
@@ -132,7 +132,7 @@ export default async function handler(req: NextRequest) {
       ${sanitizedQuery}
       """
 
-      Answer as markdown (including related code snippets if available):
+      Answer as markdown with each sentence on a new line (including related code snippets if available):
     `
 
     const completionOptions: CreateCompletionRequest = {
