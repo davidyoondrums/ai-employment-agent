@@ -137,7 +137,7 @@ export default async function handler(req: NextRequest) {
 
     const completionOptions: CreateCompletionRequest = {
       model: 'gpt-4',
-      messages: [{role: 'assistant', content: prompt}]
+      messages: [{ role: "assistant", content: prompt }],
       //max_tokens: 1000,
       // temperature: 0.1,
       // stream: true,
