@@ -2,17 +2,26 @@ import type { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { codeBlock, oneLine } from 'common-tags'
 import GPT3Tokenizer from 'gpt3-tokenizer'
-import { CreateCompletionRequest } from 'openai'
+import {
+  Configuration,
+  OpenAIApi,
+  CreateModerationResponse,
+  CreateEmbeddingResponse,
+  ChatCompletionRequestMessage,
+} from 'openai-edge'
+import { OpenAIStream, StreamingTextResponse } from 'ai'
 import { ApplicationError, UserError } from '@/lib/errors'
-
-// OpenAIApi does currently not work in Vercel Edge Functions as it uses Axios under the hood.
-export const config = {
-  runtime: 'edge',
-}
 
 const openAiKey = process.env.OPENAI_KEY
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+const config = new Configuration({
+  apiKey: openAiKey,
+})
+const openai = new OpenAIApi(config)
+
+export const runtime = 'edge'
 
 export default async function handler(req: NextRequest) {
   try {
@@ -34,7 +43,7 @@ export default async function handler(req: NextRequest) {
       throw new UserError('Missing request data')
     }
 
-    const { query } = requestData
+    const { prompt: query } = requestData
 
     if (!query) {
       throw new UserError('Missing query in request data')
@@ -44,16 +53,9 @@ export default async function handler(req: NextRequest) {
 
     // Moderate the content to comply with OpenAI T&C
     const sanitizedQuery = query.trim()
-    const moderationResponse = await fetch('https://api.openai.com/v1/moderations', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${openAiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        input: sanitizedQuery,
-      }),
-    }).then((res) => res.json())
+    const moderationResponse: CreateModerationResponse = await openai
+      .createModeration({ input: sanitizedQuery })
+      .then((res) => res.json())
 
     const [results] = moderationResponse.results
 
@@ -64,16 +66,10 @@ export default async function handler(req: NextRequest) {
       })
     }
 
-    const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${openAiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'text-embedding-ada-002',
-        input: sanitizedQuery.replaceAll('\n', ' '),
-      }),
+    // Create embedding from query
+    const embeddingResponse = await openai.createEmbedding({
+      model: 'text-embedding-ada-002',
+      input: sanitizedQuery.replaceAll('\n', ' '),
     })
 
     if (embeddingResponse.status !== 200) {
@@ -82,7 +78,7 @@ export default async function handler(req: NextRequest) {
 
     const {
       data: [{ embedding }],
-    } = await embeddingResponse.json()
+    }: CreateEmbeddingResponse = await embeddingResponse.json()
 
     const { error: matchError, data: pageSections } = await supabaseClient.rpc(
       'match_page_sections',
@@ -117,12 +113,12 @@ export default async function handler(req: NextRequest) {
 
     const prompt = codeBlock`
       ${oneLine`
-        You are a very enthusiastic employment agent that represents David Yoon. 
-        You love to represent David Yoon in the most amazing way possible! 
-        Given the following Context sections about David Yoon, answer the question using only that information,
-        The length of your answer shold be limited to two sentences. 
-        If you are unsure and the answer is not explicitly written in the Context sections about David Yoon, say
-        "Sorry, I am unsure of your question, feel free to reach out to David directly."
+      You are a very enthusiastic employment agent that represents David Yoon. 
+      You love to represent David Yoon in the most amazing way possible! 
+      Given the following Context sections about David Yoon, answer the question using only that information,
+      The length of your answer shold be limited to two sentences. 
+      If you are unsure and the answer is not explicitly written in the Context sections about David Yoon, say
+      "Sorry, I am unsure of your question, feel free to reach out to David directly."
       `}
 
       Context sections:
@@ -132,25 +128,20 @@ export default async function handler(req: NextRequest) {
       ${sanitizedQuery}
       """
 
-      Answer as markdown with each sentence on a new line (including related code snippets if available):
+      Answer as markdown (including related code snippets if available):
     `
 
-    const completionOptions: CreateCompletionRequest = {
-      model: 'text-davinci-003',
-      prompt,
-      // messages: [{ role: "assistant", content: prompt }],
-      max_tokens: 1000,
-      temperature: 0.1,
-      stream: true,
+    const chatMessage: ChatCompletionRequestMessage = {
+      role: 'user',
+      content: prompt,
     }
 
-    const response = await fetch('https://api.openai.com/v1/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${openAiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(completionOptions),
+    const response = await openai.createChatCompletion({
+      model: 'gpt-3.5-turbo',
+      messages: [chatMessage],
+      max_tokens: 512,
+      temperature: 0,
+      stream: true,
     })
 
     if (!response.ok) {
@@ -158,12 +149,11 @@ export default async function handler(req: NextRequest) {
       throw new ApplicationError('Failed to generate completion', error)
     }
 
-    // Proxy the streamed SSE response from OpenAI
-    return new Response(response.body, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-      },
-    })
+    // Transform the response into a readable stream
+    const stream = OpenAIStream(response)
+
+    // Return a StreamingTextResponse, which can be consumed by the client
+    return new StreamingTextResponse(stream)
   } catch (err: unknown) {
     if (err instanceof UserError) {
       return new Response(
