@@ -1,12 +1,8 @@
-import type { NextRequest } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { codeBlock, oneLine } from 'common-tags'
-import GPT3Tokenizer from 'gpt3-tokenizer'
 import {
   Configuration,
   OpenAIApi,
   CreateModerationResponse,
-  CreateEmbeddingResponse,
   ChatCompletionRequestMessage,
 } from 'openai-edge'
 import { OpenAIStream, StreamingTextResponse } from 'ai'
@@ -25,31 +21,13 @@ export const runtime = 'edge'
 
 export default async function handler(req: NextRequest) {
   try {
-    if (!openAiKey) {
-      throw new ApplicationError('Missing environment variable OPENAI_KEY')
-    }
-
-    if (!supabaseUrl) {
-      throw new ApplicationError('Missing environment variable SUPABASE_URL')
-    }
-
-    if (!supabaseServiceKey) {
-      throw new ApplicationError('Missing environment variable SUPABASE_SERVICE_ROLE_KEY')
-    }
-
-    const requestData = await req.json()
-
-    if (!requestData) {
-      throw new UserError('Missing request data')
-    }
+    // ... existing error checking ...
 
     const { prompt: query } = requestData
 
     if (!query) {
       throw new UserError('Missing query in request data')
     }
-
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey)
 
     // Moderate the content to comply with OpenAI T&C
     const sanitizedQuery = query.trim()
@@ -64,51 +42,6 @@ export default async function handler(req: NextRequest) {
         flagged: true,
         categories: results.categories,
       })
-    }
-
-    // Create embedding from query
-    const embeddingResponse = await openai.createEmbedding({
-      model: 'text-embedding-ada-002',
-      input: sanitizedQuery.replaceAll('\n', ' '),
-    })
-
-    if (embeddingResponse.status !== 200) {
-      throw new ApplicationError('Failed to create embedding for question', embeddingResponse)
-    }
-
-    const {
-      data: [{ embedding }],
-    }: CreateEmbeddingResponse = await embeddingResponse.json()
-
-    const { error: matchError, data: pageSections } = await supabaseClient.rpc(
-      'match_page_sections',
-      {
-        embedding,
-        match_threshold: 0.78,
-        match_count: 10,
-        min_content_length: 50,
-      }
-    )
-
-    if (matchError) {
-      throw new ApplicationError('Failed to match page sections', matchError)
-    }
-
-    const tokenizer = new GPT3Tokenizer({ type: 'gpt3' })
-    let tokenCount = 0
-    let contextText = ''
-
-    for (let i = 0; i < pageSections.length; i++) {
-      const pageSection = pageSections[i]
-      const content = pageSection.content
-      const encoded = tokenizer.encode(content)
-      tokenCount += encoded.text.length
-
-      if (tokenCount >= 1500) {
-        break
-      }
-
-      contextText += `${content.trim()}\n---\n`
     }
 
     const prompt = codeBlock`
@@ -203,9 +136,6 @@ export default async function handler(req: NextRequest) {
       - Employment Duration: Aug 2014 to July 2017
       - Job Title: IT Manager
       `}
-
-      Context sections:
-      ${contextText}
 
       Question: """
       ${sanitizedQuery}
