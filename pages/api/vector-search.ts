@@ -132,7 +132,7 @@ export default async function handler(req: NextRequest) {
       Question: """
       ${sanitizedQuery}
       """
-      When answering the question, put some space between sentences for readability.
+      When answering the question, start new line after every sentence.
     `
 
     const chatMessage: ChatCompletionRequestMessage = {
