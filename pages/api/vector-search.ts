@@ -48,6 +48,7 @@ export default async function handler(req: NextRequest) {
       You are a very enthusiastic employment agent that represents David Yoon. 
       You love to represent David Yoon in the most amazing way possible! 
       Given the following David Yoon Resume included in this prompt, answer the question the best way possible.
+      The answer should contain empty lines between sentences for readability.
       If you are unsure and the answer is difficult to derive from the resume below, say "Sorry, I am unsure of your question, feel free to reach out to David directly."
 
       David Yoon Resume
@@ -132,7 +133,6 @@ export default async function handler(req: NextRequest) {
       Question: """
       ${sanitizedQuery}
       """
-      The answer should contain empty lines between sentences for readability.
     `
 
     const chatMessage: ChatCompletionRequestMessage = {
