@@ -21,7 +21,7 @@ export const runtime = 'edge'
 export default async function handler(req: NextRequest) {
   try {
     // ... existing error checking ...
-
+    const requestData = await req.json()
     const { prompt: query } = requestData
 
     if (!query) {
