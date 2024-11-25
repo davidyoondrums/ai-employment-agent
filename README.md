@@ -15,7 +15,7 @@ Building your own custom ChatGPT involves four steps:
 1. [👷 Build time] Pre-process the knowledge base (your `.mdx` files in your `pages` folder).
 2. [👷 Build time] Store embeddings in Postgres with [pgvector](https://supabase.com/docs/guides/database/extensions/pgvector).
 3. [🏃 Runtime] Perform vector similarity search to find the content that's relevant to the question.
-4. [🏃 Runtime] Inject content into OpenAI GPT-3 text completion prompt and stream response to the client.
+4. [🏃 Runtime] Inject content into OpenAI GPT-4o prompt and stream response to the client.
 
 ## 👷 Build time
 
