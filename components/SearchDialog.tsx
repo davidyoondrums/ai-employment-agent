@@ -148,9 +148,9 @@ export function SearchDialog() {
                   hover:bg-slate-100 dark:hover:bg-gray-600
                   rounded border border-slate-200 dark:border-slate-600
                   transition-colors"
-                  onClick={(_) => setQuery('Tehll me about his leadership experience?')}
+                  onClick={(_) => setQuery('Tell me about his experience in managing Information Security Program in modern IT environments.')}
                 >
-                  Tehll me about his leadership experience?
+                  Tell me about his experience in managing Information Security Program in modern IT environments.
                 </button>
               </div>
             </div>
