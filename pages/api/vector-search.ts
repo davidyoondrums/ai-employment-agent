@@ -22,8 +22,45 @@ export const runtime = 'nodejs'
 
 export default async function handler(req: NextRequest) {
   try {
-    // ... existing error checking ...
-    const requestData = await req.json()
+    // Parse request body - handle both edge and nodejs runtime
+    let requestData: { prompt?: string }
+    
+    try {
+      // In Next.js 13, NextRequest.json() should work, but if it doesn't, use body reader
+      if (req.json && typeof req.json === 'function') {
+        requestData = await req.json()
+      } else if (req.body && typeof req.body.getReader === 'function') {
+        // Fallback: read from body stream for nodejs runtime
+        const reader = req.body.getReader()
+        const chunks: Uint8Array[] = []
+        let done = false
+        
+        while (!done) {
+          const { value, done: streamDone } = await reader.read()
+          done = streamDone
+          if (value) {
+            chunks.push(value)
+          }
+        }
+        
+        // Concatenate all chunks
+        const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
+        const combined = new Uint8Array(totalLength)
+        let offset = 0
+        for (const chunk of chunks) {
+          combined.set(chunk, offset)
+          offset += chunk.length
+        }
+        const bodyText = new TextDecoder().decode(combined)
+        requestData = JSON.parse(bodyText)
+      } else {
+        throw new UserError('Request body is not available')
+      }
+    } catch (parseError) {
+      console.error('Error parsing request body:', parseError)
+      throw new UserError('Invalid request body format')
+    }
+    
     const { prompt: query } = requestData
 
     if (!query) {
