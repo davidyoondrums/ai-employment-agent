@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "pnpm run embeddings && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write \"./**/*.{js,jsx,ts,tsx,css,md,json}\"",
@@ -26,7 +26,6 @@
   "dependencies": {
     "@radix-ui/react-dialog": "^1.0.3",
     "@radix-ui/react-label": "^2.0.1",
-    "@supabase/supabase-js": "^2.13.0",
     "@types/node": "^25.0.0",
     "@types/react": "18.0.30",
     "@types/react-dom": "18.0.11",

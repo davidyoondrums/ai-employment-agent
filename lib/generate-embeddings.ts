@@ -487,7 +487,15 @@ async function generateEmbeddings() {
 }
 
 async function main() {
-  await generateEmbeddings()
+  try {
+    await generateEmbeddings()
+    process.exit(0)
+  } catch (err) {
+    console.error('Error during embedding generation:', err)
+    // Don't fail the build if embeddings generation fails (e.g., during CI/CD)
+    // The app can still work without pre-generated embeddings
+    process.exit(0)
+  }
 }
 
-main().catch((err) => console.error(err))
+main()
