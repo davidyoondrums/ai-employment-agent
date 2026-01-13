@@ -22,29 +22,23 @@ export const runtime = 'nodejs'
 
 export default async function handler(req: NextRequest) {
   try {
-    // Parse request body - use Request API which NextRequest extends
+    // Parse request body - use text() method which works in both edge and nodejs runtimes
     let requestData: { prompt?: string }
     
     try {
-      // Create a new Request from NextRequest to ensure body is accessible
-      // In nodejs runtime, we need to clone the request to read the body
-      const clonedRequest = req.clone()
-      requestData = await clonedRequest.json()
-    } catch (parseError) {
-      // Fallback: try reading from the original request
-      try {
-        requestData = await req.json()
-      } catch (secondError) {
-        console.error('Error parsing request body:', parseError, secondError)
-        // Last resort: try to get body as text
-        try {
-          const bodyText = await req.text()
-          requestData = JSON.parse(bodyText)
-        } catch (finalError) {
-          console.error('All body parsing methods failed:', finalError)
-          throw new UserError('Unable to parse request body. Please ensure the request contains valid JSON.')
-        }
+      // Read body as text first, then parse JSON
+      // This approach works reliably in both edge and nodejs runtimes
+      const bodyText = await req.text()
+      if (!bodyText || bodyText.trim().length === 0) {
+        throw new UserError('Request body is empty')
       }
+      requestData = JSON.parse(bodyText)
+    } catch (parseError) {
+      console.error('Error parsing request body:', parseError)
+      if (parseError instanceof UserError) {
+        throw parseError
+      }
+      throw new UserError('Unable to parse request body. Please ensure the request contains valid JSON.')
     }
     
     const { prompt: query } = requestData
