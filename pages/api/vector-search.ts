@@ -50,7 +50,17 @@ export default async function handler(req: NextRequest) {
     }
 
     // Read MDX files directly
-    const mdxContent = await readMdxFiles()
+    let mdxContent: string
+    try {
+      mdxContent = await readMdxFiles()
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.error('Failed to load MDX files:', errorMessage)
+      throw new ApplicationError(
+        'Failed to load knowledge base content. Please try again later.',
+        { originalError: errorMessage }
+      )
+    }
 
     const prompt = codeBlock`
       ${oneLine`

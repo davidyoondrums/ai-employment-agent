@@ -492,9 +492,8 @@ async function main() {
     process.exit(0)
   } catch (err) {
     console.error('Error during embedding generation:', err)
-    // Don't fail the build if embeddings generation fails (e.g., during CI/CD)
-    // The app can still work without pre-generated embeddings
-    process.exit(0)
+    // Exit with error code to signal failure to CI/CD systems
+    process.exit(1)
   }
 }
 
