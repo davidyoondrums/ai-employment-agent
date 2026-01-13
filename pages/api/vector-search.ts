@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server'
+import type { NextApiRequest, NextApiResponse } from 'next'
 import { codeBlock, oneLine } from 'common-tags'
 import {
   Configuration,
@@ -6,7 +6,7 @@ import {
   CreateModerationResponse,
   ChatCompletionRequestMessage,
 } from 'openai-edge'
-import { OpenAIStream, StreamingTextResponse } from 'ai'
+import { OpenAIStream } from 'ai'
 import { ApplicationError, UserError } from '@/lib/errors'
 import { readMdxFiles } from '@/lib/read-mdx-files'
 
@@ -17,31 +17,18 @@ const config = new Configuration({
 })
 const openai = new OpenAIApi(config)
 
-// Change to nodejs runtime to allow file system access
-export const runtime = 'nodejs'
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  // Only allow POST requests
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
 
-export default async function handler(req: NextRequest) {
   try {
-    // Parse request body - use text() method which works in both edge and nodejs runtimes
-    let requestData: { prompt?: string }
-    
-    try {
-      // Read body as text first, then parse JSON
-      // This approach works reliably in both edge and nodejs runtimes
-      const bodyText = await req.text()
-      if (!bodyText || bodyText.trim().length === 0) {
-        throw new UserError('Request body is empty')
-      }
-      requestData = JSON.parse(bodyText)
-    } catch (parseError) {
-      console.error('Error parsing request body:', parseError)
-      if (parseError instanceof UserError) {
-        throw parseError
-      }
-      throw new UserError('Unable to parse request body. Please ensure the request contains valid JSON.')
-    }
-    
-    const { prompt: query } = requestData
+    // Parse request body - Next.js automatically parses JSON body for us
+    const { prompt: query } = req.body
 
     if (!query) {
       throw new UserError('Missing query in request data')
@@ -116,20 +103,33 @@ export default async function handler(req: NextRequest) {
     // Transform the response into a readable stream
     const stream = OpenAIStream(response)
 
-    // Return a StreamingTextResponse, which can be consumed by the client
-    return new StreamingTextResponse(stream)
+    // Set headers for streaming response
+    res.setHeader('Content-Type', 'text/event-stream')
+    res.setHeader('Cache-Control', 'no-cache')
+    res.setHeader('Connection', 'keep-alive')
+
+    // Pipe the stream to the response
+    const reader = stream.getReader()
+    const decoder = new TextDecoder()
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        res.write(chunk)
+      }
+    } finally {
+      reader.releaseLock()
+      res.end()
+    }
   } catch (err: unknown) {
     if (err instanceof UserError) {
-      return new Response(
-        JSON.stringify({
-          error: err.message,
-          data: err.data,
-        }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      )
+      return res.status(400).json({
+        error: err.message,
+        data: err.data,
+      })
     } else if (err instanceof ApplicationError) {
       // Print out application errors with their additional data
       console.error(`${err.message}: ${JSON.stringify(err.data)}`)
@@ -138,15 +138,8 @@ export default async function handler(req: NextRequest) {
       console.error(err)
     }
 
-    // TODO: include more response info in debug environments
-    return new Response(
-      JSON.stringify({
-        error: 'There was an error processing your request',
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    )
+    return res.status(500).json({
+      error: 'There was an error processing your request',
+    })
   }
 }
