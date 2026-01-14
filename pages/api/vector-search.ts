@@ -1,21 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { codeBlock, oneLine } from 'common-tags'
-import {
-  Configuration,
-  OpenAIApi,
-  CreateModerationResponse,
-  ChatCompletionRequestMessage,
-} from 'openai-edge'
-import { OpenAIStream } from 'ai'
+import OpenAI from 'openai'
 import { ApplicationError, UserError } from '@/lib/errors'
 import { readMdxFiles } from '@/lib/read-mdx-files'
 
 const openAiKey = process.env.OPENAI_KEY
 
-const config = new Configuration({
+const openai = new OpenAI({
   apiKey: openAiKey,
 })
-const openai = new OpenAIApi(config)
 
 export default async function handler(
   req: NextApiRequest,
@@ -36,9 +29,9 @@ export default async function handler(
 
     // Moderate the content to comply with OpenAI T&C
     const sanitizedQuery = query.trim()
-    const moderationResponse: CreateModerationResponse = await openai
-      .createModeration({ input: sanitizedQuery })
-      .then((res) => res.json())
+    const moderationResponse = await openai.moderations.create({
+      input: sanitizedQuery,
+    })
 
     if (!moderationResponse.results || !Array.isArray(moderationResponse.results) || moderationResponse.results.length === 0) {
       throw new ApplicationError('Invalid moderation response', { moderationResponse })
@@ -82,46 +75,35 @@ export default async function handler(
       """
     `
 
-    const chatMessage: ChatCompletionRequestMessage = {
-      role: 'user',
-      content: prompt,
-    }
-
-    const response = await openai.createChatCompletion({
+    const stream = await openai.chat.completions.create({
       model: 'gpt-4o',
-      messages: [chatMessage],
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
       max_tokens: 512,
       temperature: 0,
       stream: true,
     })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new ApplicationError('Failed to generate completion', error)
-    }
-
-    // Transform the response into a readable stream
-    const stream = OpenAIStream(response)
 
     // Set headers for streaming response
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
     res.setHeader('Connection', 'keep-alive')
 
-    // Pipe the stream to the response
-    const reader = stream.getReader()
-    const decoder = new TextDecoder()
-
+    // Stream the response in the format expected by the ai package's useCompletion hook
+    // The format is: 0:"text chunk"\n for each chunk
     try {
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value, { stream: true })
-        res.write(chunk)
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || ''
+        if (content) {
+          // Format as data stream: 0:"content"\n
+          res.write(`0:"${content.replace(/"/g, '\\"')}"\n`)
+        }
       }
     } finally {
-      reader.releaseLock()
       res.end()
     }
   } catch (err: unknown) {
