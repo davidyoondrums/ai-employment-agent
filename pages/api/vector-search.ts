@@ -27,11 +27,31 @@ export default async function handler(
       throw new UserError('Missing query in request data')
     }
 
-    // Moderate the content to comply with OpenAI T&C
     const sanitizedQuery = query.trim()
-    const moderationResponse = await openai.moderations.create({
-      input: sanitizedQuery,
-    })
+
+    // Set headers for streaming response early to prevent timeout
+    res.setHeader('Content-Type', 'text/event-stream')
+    res.setHeader('Cache-Control', 'no-cache')
+    res.setHeader('Connection', 'keep-alive')
+    res.setHeader('X-Accel-Buffering', 'no') // Disable nginx buffering
+
+    // Start response immediately to prevent timeout
+    res.write('')
+
+    // Run moderation and MDX reading in parallel for faster startup
+    const [moderationResponse, mdxContent] = await Promise.all([
+      openai.moderations.create({
+        input: sanitizedQuery,
+      }),
+      readMdxFiles().catch((error) => {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        console.error('Failed to load MDX files:', errorMessage)
+        throw new ApplicationError(
+          'Failed to load knowledge base content. Please try again later.',
+          { originalError: errorMessage }
+        )
+      }),
+    ])
 
     if (!moderationResponse.results || !Array.isArray(moderationResponse.results) || moderationResponse.results.length === 0) {
       throw new ApplicationError('Invalid moderation response', { moderationResponse })
@@ -44,19 +64,6 @@ export default async function handler(
         flagged: true,
         categories: results.categories,
       })
-    }
-
-    // Read MDX files directly
-    let mdxContent: string
-    try {
-      mdxContent = await readMdxFiles()
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      console.error('Failed to load MDX files:', errorMessage)
-      throw new ApplicationError(
-        'Failed to load knowledge base content. Please try again later.',
-        { originalError: errorMessage }
-      )
     }
 
     const prompt = codeBlock`
@@ -88,11 +95,6 @@ export default async function handler(
       stream: true,
     })
 
-    // Set headers for streaming response
-    res.setHeader('Content-Type', 'text/event-stream')
-    res.setHeader('Cache-Control', 'no-cache')
-    res.setHeader('Connection', 'keep-alive')
-
     // Stream the response in the format expected by the ai package's useCompletion hook
     // The format is: 0:"text chunk"\n for each chunk
     try {
@@ -100,7 +102,17 @@ export default async function handler(
         const content = chunk.choices[0]?.delta?.content || ''
         if (content) {
           // Format as data stream: 0:"content"\n
-          res.write(`0:"${content.replace(/"/g, '\\"')}"\n`)
+          // Escape quotes and newlines properly
+          const escapedContent = content
+            .replace(/\\/g, '\\\\')
+            .replace(/"/g, '\\"')
+            .replace(/\n/g, '\\n')
+            .replace(/\r/g, '\\r')
+          res.write(`0:"${escapedContent}"\n`)
+          // Flush immediately to prevent timeout
+          if (typeof (res as any).flush === 'function') {
+            (res as any).flush()
+          }
         }
       }
     } finally {

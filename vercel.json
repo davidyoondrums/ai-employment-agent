@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "pages/api/vector-search.ts": {
+      "maxDuration": 60
+    }
+  }
+}
