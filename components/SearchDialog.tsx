@@ -90,8 +90,8 @@ export function SearchDialog() {
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4 text-slate-700">
               {query && (
-                <div className="flex gap-4">
-                  <span className="bg-slate-100 dark:bg-slate-300 p-2 w-8 h-8 rounded-full text-center flex items-center justify-center">
+                <div className="flex gap-4 mb-2">
+                  <span className="bg-slate-100 dark:bg-slate-300 p-2 w-8 h-8 rounded-full text-center flex items-center justify-center flex-shrink-0">
                     <User width={18} />{' '}
                   </span>
                   <p className="mt-0.5 font-semibold text-slate-700 dark:text-slate-100">{query}</p>
@@ -116,12 +116,16 @@ export function SearchDialog() {
               )}
 
               {completion && !error ? (
-                <div className="flex items-center gap-4 dark:text-white">
-                  <span className="bg-green-500 p-2 w-8 h-8 rounded-full text-center flex items-center justify-center">
+                <div className="flex gap-4 dark:text-white mt-4">
+                  <span className="bg-green-500 p-2 w-8 h-8 rounded-full text-center flex items-center justify-center flex-shrink-0">
                     <Wand width={18} className="text-white" />
                   </span>
-                  <h3 className="font-semibold">Answer:</h3>
-                  {completion}
+                  <div className="flex-1">
+                    <h3 className="font-semibold mb-3 text-slate-700 dark:text-slate-100">Answer:</h3>
+                    <div className="text-slate-700 dark:text-slate-100 leading-relaxed whitespace-pre-wrap">
+                      {completion}
+                    </div>
+                  </div>
                 </div>
               ) : null}
 
