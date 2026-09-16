@@ -108,7 +108,7 @@ export function SearchDialog() {
                     <Frown width={18} />
                   </span>
                   <span className="text-slate-700 dark:text-slate-100">
-                    Sad news, the search has failed! Please try again.
+                    {error.message || 'Sad news, the search has failed! Please try again.'}
                   </span>
                 </div>
               )}

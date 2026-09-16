@@ -6,11 +6,23 @@ import { readMdxFiles } from '@/lib/read-mdx-files'
 
 const openAiKey = process.env.OPENAI_KEY
 
+// The deployed function is capped at 60s (see vercel.json). The SDK obeys a
+// 429's Retry-After, which OpenAI can set to tens of seconds, so leaving the
+// defaults lets a throttled request sleep straight past that cap and return
+// nothing at all.
+//
+// Retrying in here cannot help the case that actually occurs: a rate limit
+// that needs a 40s wait will not have cleared by the time the budget runs
+// out, and every second spent asleep is a second not spent streaming the
+// answer. Fail fast instead and let the caller ask again -- the 429 response
+// says as much, and carries Retry-After when OpenAI supplies it.
+const REQUEST_TIMEOUT_MS = 45_000
+const MODERATION_TIMEOUT_MS = 5_000
+
 const openai = new OpenAI({
   apiKey: openAiKey,
-  // An account-level throttle won't clear inside this function's 60s budget,
-  // so cap the backoff instead of spending the whole budget on it.
-  maxRetries: 2,
+  maxRetries: 0,
+  timeout: REQUEST_TIMEOUT_MS,
 })
 
 // The knowledge base ships with the deployment and never changes at runtime,
@@ -72,7 +84,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // itself is unavailable (429/5xx) we log and continue rather than taking
       // down the whole request - but a genuine flag still blocks.
       openai.moderations
-        .create({ input: sanitizedQuery })
+        // Never retried: the call fails open, so a retry only burns budget.
+        .create({ input: sanitizedQuery }, { maxRetries: 0, timeout: MODERATION_TIMEOUT_MS })
         .then((response) => response.results?.[0])
         .catch((error: unknown) => {
           console.error(
@@ -154,7 +167,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error(`${err.message}: ${JSON.stringify(err.data)}`)
     } else if (isRateLimit(err)) {
       console.error(
-        `OpenAI rate limit (request ${err.request_id ?? 'unknown'}): ${err.message}`
+        `OpenAI rate limit (request ${err.requestID ?? 'unknown'}): ${err.message}`
       )
     } else if (err instanceof ApplicationError) {
       // Print out application errors with their additional data
@@ -182,7 +195,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (isRateLimit(err)) {
-      const retryAfter = err.headers?.['retry-after']
+      const retryAfter = err.headers?.get('retry-after')
       if (retryAfter) {
         res.setHeader('Retry-After', retryAfter)
       }
