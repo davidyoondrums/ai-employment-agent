@@ -22,6 +22,11 @@ export function SearchDialog() {
     api: '/api/vector-search',
   })
 
+  const closeModal = React.useCallback(() => {
+    setOpen(false)
+    setQuery('')
+  }, [])
+
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && e.metaKey) {
@@ -29,23 +34,16 @@ export function SearchDialog() {
       }
 
       if (e.key === 'Escape') {
-        console.log('esc')
-        handleModalToggle()
+        closeModal()
       }
     }
 
     document.addEventListener('keydown', down)
     return () => document.removeEventListener('keydown', down)
-  }, [])
-
-  function handleModalToggle() {
-    setOpen(!open)
-    setQuery('')
-  }
+  }, [closeModal])
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault()
-    console.log(query)
     complete(query)
   }
 
@@ -74,7 +72,7 @@ export function SearchDialog() {
           <span className="text-xs">⌘</span>K
         </kbd>{' '}
       </button>
-      <Dialog open={open}>
+      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && closeModal()}>
         <DialogContent className="sm:max-w-[850px] max-h-[80vh] overflow-y-auto text-black">
           <DialogHeader>
             <DialogTitle>Ask me anything about David Yoon</DialogTitle>
@@ -82,7 +80,7 @@ export function SearchDialog() {
             I am an AI agent built to represent David.
             </DialogDescription>
             <hr />
-            <button className="absolute top-0 right-2 p-2" onClick={() => setOpen(false)}>
+            <button className="absolute top-0 right-2 p-2" onClick={closeModal}>
               <X className="h-4 w-4 dark:text-gray-100" />
             </button>
           </DialogHeader>
