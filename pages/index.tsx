@@ -11,10 +11,10 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Next.js OpenAI Template</title>
+        <title>David Yoon | AI Employment Agent</title>
         <meta
           name="description"
-          content="Next.js Template for building OpenAI applications with Supabase."
+          content="Ask an AI agent about David Yoon's background in information security and IT leadership."
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
