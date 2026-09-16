@@ -121,7 +121,10 @@ export function SearchDialog() {
                   <div className="flex-1">
                     <h3 className="font-semibold mb-3 text-slate-700 dark:text-slate-100">Answer:</h3>
                     <div className="text-slate-700 dark:text-slate-100 leading-relaxed whitespace-pre-wrap">
-                      {completion}
+                      {/* pre-wrap keeps every newline the model emits, and models
+                          vary in how many they put between paragraphs. Collapse
+                          runs of blank lines to one so spacing stays even. */}
+                      {completion.replace(/\n{3,}/g, '\n\n').trim()}
                     </div>
                   </div>
                 </div>
