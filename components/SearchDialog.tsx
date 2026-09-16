@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { useCompletion } from 'ai/react'
+import { useCompletion } from '@/lib/use-completion'
 import { X, Loader, User, Frown, CornerDownLeft, Search, Wand } from 'lucide-react'
 
 export function SearchDialog() {
