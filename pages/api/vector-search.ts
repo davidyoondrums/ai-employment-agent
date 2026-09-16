@@ -12,7 +12,7 @@ const openAiKey = process.env.OPENAI_KEY
 // about a resume. Deliberately an undated alias rather than a dated snapshot:
 // OpenAI retires snapshots on a schedule but moves aliases forward, so this
 // does not need revisiting every time a new version ships.
-const MODEL = process.env.OPENAI_MODEL ?? 'gpt-5.6-luna'
+const MODEL = process.env.OPENAI_MODEL ?? 'gpt-4o'
 const MAX_OUTPUT_TOKENS = 512
 
 // There is no output-limit parameter that works on every model: max_tokens is
