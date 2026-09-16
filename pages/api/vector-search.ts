@@ -15,15 +15,22 @@ const openAiKey = process.env.OPENAI_KEY
 const MODEL = process.env.OPENAI_MODEL ?? 'gpt-4o'
 const MAX_OUTPUT_TOKENS = 512
 
-// There is no output-limit parameter that works on every model: max_tokens is
-// deprecated and rejected by o-series and newer models, while its replacement
-// max_completion_tokens is rejected by legacy ones like gpt-4o. Pick by family
-// so OPENAI_MODEL stays a real escape hatch instead of a way to 400 the API.
-const LEGACY_TOKEN_PARAM = /^(gpt-4o|gpt-4$|gpt-4-|gpt-3\.5)/
+// Two parameters differ by model generation, in opposite directions, so there
+// is no single set that works everywhere:
+//
+//   max_tokens          deprecated, and rejected by GPT-5 and later
+//   max_completion_tokens   rejected by legacy models such as gpt-4o
+//   temperature         rejected outright by GPT-5 and later, which fix it
+//                       at 1 ("Unsupported parameter: 'temperature' is not
+//                       supported with this model")
+//
+// Derive both from the model so OPENAI_MODEL stays a setting that can be
+// changed safely rather than a way to 400 every request.
+const LEGACY_PARAM_MODELS = /^(gpt-4o|gpt-4$|gpt-4-|gpt-3\.5)/
 
-function outputTokenLimit(model: string) {
-  return LEGACY_TOKEN_PARAM.test(model)
-    ? { max_tokens: MAX_OUTPUT_TOKENS }
+function modelParams(model: string) {
+  return LEGACY_PARAM_MODELS.test(model)
+    ? { max_tokens: MAX_OUTPUT_TOKENS, temperature: 0 }
     : { max_completion_tokens: MAX_OUTPUT_TOKENS }
 }
 
@@ -151,8 +158,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           content: prompt,
         },
       ],
-      ...outputTokenLimit(MODEL),
-      temperature: 0,
+      ...modelParams(MODEL),
       stream: true,
     })
 
