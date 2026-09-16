@@ -6,6 +6,27 @@ import { readMdxFiles } from '@/lib/read-mdx-files'
 
 const openAiKey = process.env.OPENAI_KEY
 
+// Set OPENAI_MODEL to change models without a code deploy. The default is the
+// cost-optimised tier, which is roughly an order of magnitude cheaper than
+// gpt-4o for this workload and comfortably capable enough to answer questions
+// about a resume. Deliberately an undated alias rather than a dated snapshot:
+// OpenAI retires snapshots on a schedule but moves aliases forward, so this
+// does not need revisiting every time a new version ships.
+const MODEL = process.env.OPENAI_MODEL ?? 'gpt-5.6-luna'
+const MAX_OUTPUT_TOKENS = 512
+
+// There is no output-limit parameter that works on every model: max_tokens is
+// deprecated and rejected by o-series and newer models, while its replacement
+// max_completion_tokens is rejected by legacy ones like gpt-4o. Pick by family
+// so OPENAI_MODEL stays a real escape hatch instead of a way to 400 the API.
+const LEGACY_TOKEN_PARAM = /^(gpt-4o|gpt-4$|gpt-4-|gpt-3\.5)/
+
+function outputTokenLimit(model: string) {
+  return LEGACY_TOKEN_PARAM.test(model)
+    ? { max_tokens: MAX_OUTPUT_TOKENS }
+    : { max_completion_tokens: MAX_OUTPUT_TOKENS }
+}
+
 // The deployed function is capped at 60s (see vercel.json). The SDK obeys a
 // 429's Retry-After, which OpenAI can set to tens of seconds, so leaving the
 // defaults lets a throttled request sleep straight past that cap and return
@@ -123,14 +144,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // This is the call that can fail on rate limits or quota. Make it before
     // committing headers so a 429 reaches the client as a 429.
     const stream = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: MODEL,
       messages: [
         {
           role: 'user',
           content: prompt,
         },
       ],
-      max_tokens: 512,
+      ...outputTokenLimit(MODEL),
       temperature: 0,
       stream: true,
     })
@@ -168,6 +189,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else if (isRateLimit(err)) {
       console.error(
         `OpenAI rate limit (request ${err.requestID ?? 'unknown'}): ${err.message}`
+      )
+    } else if (err instanceof APIError && err.status === 400) {
+      // Almost always OPENAI_MODEL naming a model that rejects one of the
+      // parameters sent above, so say which model was tried. Without this the
+      // failure reads as a generic 500 and the env var looks innocent.
+      console.error(
+        `OpenAI rejected the request for model "${MODEL}" (request ${
+          err.requestID ?? 'unknown'
+        }): ${err.message}`
       )
     } else if (err instanceof ApplicationError) {
       // Print out application errors with their additional data
